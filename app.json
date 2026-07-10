@@ -1,10 +1,10 @@
 {
   "expo": {
-    "name": "my-react-native-app",
-    "slug": "my-react-native-app",
+    "name": "dipesh-patel-portfolio",
+    "slug": "dipesh-patel-portfolio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/brain-chip-circuit.png",
     "scheme": "myreactnativeapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
