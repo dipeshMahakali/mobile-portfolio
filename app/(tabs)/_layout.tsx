@@ -10,7 +10,7 @@ import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  const activeColor = Colors[colorScheme ?? 'dark'].cyan;
+  const activeColor = Colors[colorScheme ?? 'dark'].orange;
   const inactiveColor = Colors[colorScheme ?? 'dark'].icon;
   const insets = useSafeAreaInsets();
 

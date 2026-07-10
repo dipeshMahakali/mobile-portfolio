@@ -7,13 +7,12 @@ import {
   StyleProp,
   Platform,
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 
 interface GlassCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
-  glowColor?: 'cyan' | 'purple' | 'blue' | 'none';
+  glowColor?: 'cyan' | 'purple' | 'blue' | 'emerald' | 'rose' | 'slate' | 'none';
   onPress?: () => void;
 }
 
@@ -31,6 +30,12 @@ export function GlassCard({
         return 'rgba(168, 85, 247, 0.25)';
       case 'blue':
         return 'rgba(59, 130, 246, 0.25)';
+      case 'emerald':
+        return 'rgba(16, 185, 129, 0.25)';
+      case 'rose':
+        return 'rgba(244, 63, 94, 0.25)';
+      case 'slate':
+        return 'rgba(100, 116, 139, 0.25)';
       default:
         return 'rgba(255, 255, 255, 0.08)';
     }

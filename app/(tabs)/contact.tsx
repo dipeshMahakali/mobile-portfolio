@@ -1,22 +1,24 @@
-import React, { useState } from 'react';
-import {
-  StyleSheet,
-  Text,
-  View,
-  ScrollView,
-  TextInput,
-  Pressable,
-  Linking,
-  Alert,
-  Platform,
-  FlatList,
-  Dimensions,
-} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import React, { useState } from 'react';
+import {
+  Alert,
+  Dimensions,
+  Linking,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 
-import { GradientBackground } from '@/components/ui/gradient-background';
 import { GlassCard } from '@/components/ui/glass-card';
+import { GradientBackground } from '@/components/ui/gradient-background';
+import { CONFIG } from '@/constants/config';
+import { fetchPersonalInfo, fetchTestimonials, PersonalInfo, submitContactMessage, Testimonial } from '@/services/api';
+import { SidebarMenu } from '@/components/ui/sidebar-menu';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const CARD_WIDTH = SCREEN_WIDTH - 40;
@@ -27,51 +29,71 @@ export default function ContactScreen() {
   const [message, setMessage] = useState('');
   const [focusedField, setFocusedField] = useState<'name' | 'email' | 'message' | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const [testimonials, setTestimonials] = useState<Testimonial[]>([]);
+  const [socials, setSocials] = useState<PersonalInfo>(CONFIG.personalInfo);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const testimonials = [
-    {
-      id: 1,
-      name: "Rahul Sharma",
-      position: "Senior Python Developer",
-      company: "Tech Solutions Inc.",
-      content: "Dipesh demonstrates exceptional problem-solving skills and a deep understanding of Python development. His AI projects showcase creativity and technical excellence.",
-      rating: 5
-    },
-    {
-      id: 2,
-      name: "Priya Patel",
-      position: "IoT Project Lead",
-      company: "Innovation Labs",
-      content: "Working with Dipesh on IoT projects has been fantastic. His ability to integrate hardware and software solutions is impressive, and his dedication to learning is inspiring.",
-      rating: 5
-    },
-    {
-      id: 3,
-      name: "Amit Kumar",
-      position: "Data Science Manager",
-      company: "Analytics Pro",
-      content: "Dipesh's data science portfolio reflects strong analytical thinking and proficiency in Python libraries. His approach to machine learning problems is methodical and innovative.",
-      rating: 5
-    },
-    {
-      id: 4,
-      name: "Neha Gupta",
-      position: "Software Architect",
-      company: "Digital Innovations",
-      content: "The virtual assistant project by Dipesh shows remarkable understanding of NLP and AI concepts. His code quality and documentation are commendable.",
-      rating: 5
+  const scrollViewRef = React.useRef<ScrollView>(null);
+  const [activeTestimonialIndex, setActiveTestimonialIndex] = useState(0);
+
+  // Auto-scroll testimonials
+  React.useEffect(() => {
+    if (testimonials.length <= 1) return;
+
+    const interval = setInterval(() => {
+      setActiveTestimonialIndex((prevIndex) => {
+        const nextIndex = (prevIndex + 1) % testimonials.length;
+        scrollViewRef.current?.scrollTo({
+          x: nextIndex * (CARD_WIDTH + 16),
+          animated: true,
+        });
+        return nextIndex;
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [testimonials.length]);
+
+  const handleScroll = (event: any) => {
+    const contentOffsetX = event.nativeEvent.contentOffset.x;
+    const index = Math.round(contentOffsetX / (CARD_WIDTH + 16));
+    if (index >= 0 && index < testimonials.length) {
+      setActiveTestimonialIndex(index);
     }
-  ];
-
-  const socialLinks = {
-    email: "dipesh.patel1902@gmail.com",
-    phone: "8319821606",
-    github: "https://github.com/starkdipesh",
-    linkedin: "https://linkedin.com/in/dipeshpatel",
-    twitter: "https://twitter.com/dipeshpatel"
   };
 
-  const handleSend = () => {
+  React.useEffect(() => {
+    let active = true;
+    async function loadData() {
+      try {
+        const [testData, infoData] = await Promise.all([
+          fetchTestimonials(),
+          fetchPersonalInfo(),
+        ]);
+        if (active) {
+          if (testData) setTestimonials(testData);
+          if (infoData) setSocials(infoData);
+        }
+      } catch (err) {
+        console.error('Failed loading contact data:', err);
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const socialLinks = {
+    email: socials.email || CONFIG.personalInfo.email,
+    phone: socials.phone || CONFIG.personalInfo.phone,
+    github: socials.github || CONFIG.personalInfo.github,
+    linkedin: socials.linkedin || CONFIG.personalInfo.linkedin,
+    twitter: socials.twitter || "https://twitter.com"
+  };
+
+  const handleSend = async () => {
     if (!name.trim() || !email.trim() || !message.trim()) {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       Alert.alert("Missing Fields", "Please complete the form before sending.");
@@ -81,20 +103,30 @@ export default function ContactScreen() {
     setIsSubmitting(true);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
-    // Simulate sending message
-    setTimeout(() => {
+    try {
+      const response = await submitContactMessage(name.trim(), email.trim(), message.trim());
       setIsSubmitting(false);
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      Alert.alert(
-        "Message Sent!",
-        `Thank you ${name}, your message has been recorded. I'll get back to you shortly!`,
-        [{ text: "OK", onPress: () => {
-          setName('');
-          setEmail('');
-          setMessage('');
-        }}]
-      );
-    }, 1500);
+
+      if (response.success) {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        Alert.alert(
+          "Message Sent!",
+          response.message,
+          [{ text: "OK", onPress: () => {
+            setName('');
+            setEmail('');
+            setMessage('');
+          }}]
+        );
+      } else {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        Alert.alert("Submission Failed", response.message);
+      }
+    } catch (err: any) {
+      setIsSubmitting(false);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      Alert.alert("Error", err.message || "An unexpected error occurred.");
+    }
   };
 
   const handleLink = (url: string) => {
@@ -104,18 +136,40 @@ export default function ContactScreen() {
 
   return (
     <GradientBackground enableSafeArea>
+      <SidebarMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.topHeader}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoBadgeText}>DP</Text>
+            </View>
+            <Text style={styles.logoText}>D. Patel</Text>
+          </View>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setIsMenuOpen(true);
+            }}
+            style={({ pressed }) => [
+              styles.menuButton,
+              pressed && { transform: [{ scale: 0.95 }], backgroundColor: 'rgba(255,255,255,0.08)' }
+            ]}
+          >
+            <Ionicons name="grid-outline" size={20} color="#fff" />
+          </Pressable>
+        </View>
+
         {/* HEADER */}
         <View style={styles.header}>
           <Text style={styles.title}>
             Get in <Text style={{ color: '#06b6d4' }}>Touch</Text>
           </Text>
           <Text style={styles.subtitle}>
-            Let's discuss automated, neural, or custom IoT integrations
+            {"Let's discuss automated, neural, or custom IoT integrations"}
           </Text>
         </View>
 
@@ -199,11 +253,12 @@ export default function ContactScreen() {
             Endorsements
           </Text>
           <Text style={styles.sectionSubtitle}>
-            What my supervisors & colleagues say
+            {"What my supervisors & colleagues say"}
           </Text>
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           horizontal
           pagingEnabled
           showsHorizontalScrollIndicator={false}
@@ -211,9 +266,10 @@ export default function ContactScreen() {
           snapToAlignment="center"
           decelerationRate="fast"
           contentContainerStyle={styles.testimonialSlider}
+          onMomentumScrollEnd={handleScroll}
         >
-          {testimonials.map((t) => (
-            <GlassCard key={t.id} style={styles.testimonialCard} glowColor="purple">
+          {testimonials.map((t, idx) => (
+            <GlassCard key={t._id || idx} style={styles.testimonialCard} glowColor="purple">
               <View style={styles.testimonialHeader}>
                 <View style={styles.avatarCircle}>
                   <Text style={styles.avatarLetter}>{t.name[0]}</Text>
@@ -226,7 +282,7 @@ export default function ContactScreen() {
                 </View>
               </View>
 
-              <Text style={styles.testimonialContent}>"{t.content}"</Text>
+              <Text style={styles.testimonialContent}>{"\""}{t.content}{"\""}</Text>
 
               <View style={styles.ratingRow}>
                 {Array.from({ length: t.rating }).map((_, i) => (
@@ -236,6 +292,20 @@ export default function ContactScreen() {
             </GlassCard>
           ))}
         </ScrollView>
+
+        {testimonials.length > 1 && (
+          <View style={styles.paginationDots}>
+            {testimonials.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.dot,
+                  activeTestimonialIndex === index ? styles.activeDot : null
+                ]}
+              />
+            ))}
+          </View>
+        )}
 
         {/* SOCIAL NETWORKS */}
         <View style={styles.sectionDivider}>
@@ -474,5 +544,62 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#cbd5e1',
     fontWeight: '600',
+  },
+  paginationDots: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  activeDot: {
+    backgroundColor: '#a855f7',
+    width: 20,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  logoBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#f97316',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  logoBadgeText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '800',
+  },
+  logoText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

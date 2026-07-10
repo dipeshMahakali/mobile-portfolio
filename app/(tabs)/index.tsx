@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 import React from 'react';
@@ -12,31 +13,68 @@ import {
   View,
 } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GradientBackground } from '@/components/ui/gradient-background';
+import { SidebarMenu } from '@/components/ui/sidebar-menu';
 import { TechBadge } from '@/components/ui/tech-badge';
+import { CONFIG } from '@/constants/config';
+import {
+  fetchPersonalInfo,
+  fetchProjects,
+  fetchSkills,
+  fetchGithubActivity,
+  PersonalInfo,
+  Project,
+  Skill,
+  GithubActivity,
+} from '@/services/api';
 
 export default function HomeScreen() {
-  const personalInfo = {
-    name: "Dipesh Patel",
-    title: "Python Developer, AI & IOT Enthusiast",
-    description: "Passionate about building innovative solutions using Python, Artificial Intelligence, and Internet of Things technologies.",
-    email: "dipesh.patel1902@gmail.com",
-    phone: "8319821606",
-    location: "India",
-    github: "https://github.com/starkdipesh",
-    linkedin: "https://linkedin.com/in/dipeshpatel",
-  };
+  const [info, setInfo] = React.useState<PersonalInfo>(CONFIG.personalInfo);
+  const [projects, setProjects] = React.useState<Project[]>([]);
+  const [skills, setSkills] = React.useState<Skill[]>([]);
+  const [activities, setActivities] = React.useState<GithubActivity[]>([]);
+  const [isMenuOpen, setIsMenuOpen] = React.useState(false);
 
-  const handleEmailPress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Linking.openURL(`mailto:${personalInfo.email}`);
-  };
+  React.useEffect(() => {
+    let active = true;
+    async function loadData() {
+      try {
+        const infoData = await fetchPersonalInfo();
+        const username = infoData?.github ? infoData.github.split('/').pop() || 'starkdipesh' : 'starkdipesh';
+        const [projectsData, skillsData, activityData] = await Promise.all([
+          fetchProjects(),
+          fetchSkills(),
+          fetchGithubActivity(username),
+        ]);
+        if (active) {
+          if (infoData) setInfo(infoData);
+          if (projectsData) {
+            const featured = projectsData.filter((p: Project) => p.featured);
+            setProjects(featured);
+          }
+          if (skillsData) setSkills(skillsData);
+          if (activityData) setActivities(activityData);
+        }
+      } catch (err) {
+        console.error('Failed loading home screen data:', err);
+      }
+    }
+    loadData();
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handlePhonePress = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    Linking.openURL(`tel:${personalInfo.phone}`);
+  const getProjectThumbnail = (title: string) => {
+    const lower = title.toLowerCase();
+    if (lower.includes('jia') || lower.includes('assistant') || lower.includes('virtual')) {
+      return require('@/assets/images/brain-chip-circuit.png');
+    }
+    if (lower.includes('science') || lower.includes('data')) {
+      return require('@/assets/images/react-logo.png');
+    }
+    return require('@/assets/images/partial-react-logo.png');
   };
 
   const handleSocialPress = (url: string) => {
@@ -44,178 +82,226 @@ export default function HomeScreen() {
     Linking.openURL(url);
   };
 
-  const handleHirePress = () => {
+  const handleMoreAboutMePress = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.push('/(tabs)/contact');
+    router.push('/(tabs)/experience');
   };
+
+  const handleProjectPress = (url: string) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    Linking.openURL(url);
+  };
+
+  const socials = [
+    {
+      name: "GitHub",
+      url: info.github || CONFIG.personalInfo.github,
+      label: "Follow Me",
+      icon: "logo-github" as const,
+      color: "#06b6d4",
+    },
+    {
+      name: "LinkedIn",
+      url: info.linkedin || CONFIG.personalInfo.linkedin,
+      label: "See My Work",
+      icon: "logo-linkedin" as const,
+      color: "#a855f7",
+    },
+    {
+      name: "Email",
+      url: info.email ? `mailto:${info.email}` : `mailto:${CONFIG.personalInfo.email}`,
+      label: "Contact",
+      icon: "mail-outline" as const,
+      color: "#3b82f6",
+    }
+  ];
+
+  const shortName = info.shortName || CONFIG.personalInfo.shortName;
+  const firstName = info.firstName || CONFIG.personalInfo.firstName;
+  const title = info.title || CONFIG.personalInfo.title;
+  const specialtyTitle = CONFIG.personalInfo.specialtyTitle;
+  const specialtySubtitle = CONFIG.personalInfo.specialtySubtitle;
+  const description = info.description || CONFIG.personalInfo.description;
 
   return (
     <GradientBackground enableSafeArea>
+      <SidebarMenu isOpen={isMenuOpen} onClose={() => setIsMenuOpen(false)} />
       <ScrollView
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* HERO SECTION */}
-        <View style={styles.heroContainer}>
-          <View style={styles.avatarContainer}>
-            <View style={styles.avatarGlow} />
-            <View style={styles.avatarInner}>
-              <Text style={styles.avatarText}>DP</Text>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View style={styles.logoRow}>
+            <View style={styles.logoBadge}>
+              <Text style={styles.logoBadgeText}>DP</Text>
             </View>
+            <Text style={styles.logoText}>{shortName}</Text>
           </View>
+          <Pressable
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              setIsMenuOpen(true);
+            }}
+            style={({ pressed }) => [
+              styles.menuButton,
+              pressed && { transform: [{ scale: 0.95 }], backgroundColor: 'rgba(255,255,255,0.08)' }
+            ]}
+          >
+            <Ionicons name="grid-outline" size={20} color="#fff" />
+          </Pressable>
+        </View>
 
-          <View style={styles.welcomeRow}>
-            <Text style={styles.welcomeText}>Hello, I'm</Text>
-            <HelloWave />
+        {/* TOP BANNER */}
+        <GlassCard style={styles.bannerCard} glowColor="cyan">
+          <View style={styles.bannerContent}>
+            <View style={styles.bannerTextContainer}>
+              <Text style={styles.bannerSignature}>{"I'm "}{firstName}</Text>
+              <Text style={styles.bannerSubtitle}>{title}</Text>
+            </View>
+            <Image
+              source={{ uri: info.avatarUrl || CONFIG.avatarUrl }}
+              style={styles.bannerAvatar}
+              contentFit="cover"
+              transition={300}
+            />
           </View>
+        </GlassCard>
 
-          <Text style={styles.nameText}>{personalInfo.name}</Text>
-          <Text style={styles.titleText}>{personalInfo.title}</Text>
-          <Text style={styles.taglineText}>
-            Building high-performance automation & neural intelligence systems.
-          </Text>
-
-          <View style={styles.actionRow}>
+        {/* SOCIAL LINKS (HORIZONTAL BAR) */}
+        <View style={styles.socialBar}>
+          {socials.map((social) => (
             <Pressable
-              onPress={handleHirePress}
+              key={social.name}
+              onPress={() => handleSocialPress(social.url)}
               style={({ pressed }) => [
-                styles.hireButton,
-                pressed && { transform: [{ scale: 0.96 }] },
+                styles.socialItem,
+                { borderColor: social.color + '33' },
+                pressed && { transform: [{ scale: 0.96 }], backgroundColor: 'rgba(255,255,255,0.04)' }
               ]}
             >
-              <Text style={styles.hireButtonText}>Let's Connect</Text>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
+              <Ionicons name={social.icon} size={18} color={social.color} />
+              <View style={styles.socialLabelCol}>
+                <Text style={[styles.socialNameText, { color: social.color }]}>{social.name}</Text>
+                <Text style={styles.socialLinkLabel}>{social.label}</Text>
+              </View>
             </Pressable>
+          ))}
+        </View>
+
+        {/* INTRO SUMMARY */}
+        <View style={styles.introSection}>
+          <Text style={styles.introPre}>{specialtyTitle}</Text>
+          <Text style={styles.introMain}>{specialtySubtitle}</Text>
+          <Text style={styles.introBody}>{description}</Text>
+
+          <Pressable
+            onPress={handleMoreAboutMePress}
+            style={({ pressed }) => [
+              styles.moreAboutButton,
+              pressed && { transform: [{ scale: 0.96 }] }
+            ]}
+          >
+            <Text style={styles.moreAboutButtonText}>More about Me</Text>
+          </Pressable>
+        </View>
+
+        {/* CORE SKILLS MATRIX */}
+        {skills.length > 0 && (
+          <View style={styles.sectionDivider}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitlePre}>Core Capabilities,</Text>
+              <Text style={styles.sectionTitleMain}>Skills & Expertise</Text>
+            </View>
+            <View style={styles.skillsGrid}>
+              {skills.map((skill) => (
+                <GlassCard key={skill.name} style={styles.skillCard} glowColor="cyan">
+                  <View style={styles.skillHeader}>
+                    <Text style={styles.skillName} numberOfLines={1}>{skill.name}</Text>
+                    <Text style={styles.skillLevel}>{skill.level}%</Text>
+                  </View>
+                  <View style={styles.progressBg}>
+                    <View style={[styles.progressFill, { width: `${skill.level}%` }]} />
+                  </View>
+                </GlassCard>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* ABOUT ME SECTION (BENTO GRID) */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            About <Text style={{ color: '#06b6d4' }}>Me</Text>
-          </Text>
-          <Text style={styles.sectionSubtitle}>
-            Key specialization areas & background
-          </Text>
-        </View>
-
-        <View style={styles.bentoGrid}>
-          {/* Main Info Bio Card */}
-          <GlassCard style={styles.bioCard} glowColor="cyan">
-            <View style={styles.bioHeader}>
-              <View style={styles.bioAvatar}>
-                <Text style={styles.bioAvatarText}>DP</Text>
-              </View>
-              <View>
-                <Text style={styles.bioName}>{personalInfo.name}</Text>
-                <Text style={styles.bioTitle}>Developer & Tinkerer</Text>
-              </View>
+        {/* GITHUB ACTIVITY FEED */}
+        {activities.length > 0 && (
+          <View style={styles.sectionDivider}>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitlePre}>Live Developer Log,</Text>
+              <Text style={styles.sectionTitleMain}>GitHub Timeline</Text>
             </View>
-
-            <Text style={styles.bioDescription}>{personalInfo.description}</Text>
-
-            <View style={styles.contactDetails}>
-              <Pressable onPress={handleEmailPress} style={styles.contactRow}>
-                <Ionicons name="mail" size={16} color="#06b6d4" />
-                <Text style={styles.contactRowText}>{personalInfo.email}</Text>
-              </Pressable>
-              <Pressable onPress={handlePhonePress} style={styles.contactRow}>
-                <Ionicons name="call" size={16} color="#06b6d4" />
-                <Text style={styles.contactRowText}>+91 {personalInfo.phone}</Text>
-              </Pressable>
-              <View style={styles.contactRow}>
-                <Ionicons name="location" size={16} color="#06b6d4" />
-                <Text style={styles.contactRowText}>{personalInfo.location}</Text>
-              </View>
-            </View>
-
-            <View style={styles.socialGlowRow}>
-              <Pressable
-                onPress={() => handleSocialPress(personalInfo.github)}
-                style={styles.socialBadge}
-              >
-                <Ionicons name="logo-github" size={18} color="#06b6d4" />
-              </Pressable>
-              <Pressable
-                onPress={() => handleSocialPress(personalInfo.linkedin)}
-                style={styles.socialBadge}
-              >
-                <Ionicons name="logo-linkedin" size={18} color="#06b6d4" />
-              </Pressable>
-            </View>
-          </GlassCard>
-
-          {/* Core Specialty Rows */}
-          <View style={styles.specialtySplitRow}>
-            {/* Python Card */}
-            <GlassCard style={styles.smallSpecialtyCard} glowColor="purple">
-              <Ionicons name="code-working" size={32} color="#a855f7" style={styles.specialtyIcon} />
-              <Text style={styles.specialtyTitle}>Python Expert</Text>
-              <Text style={styles.specialtyDesc}>
-                Advanced scripts, scraping, pipelines, & integrations.
-              </Text>
-            </GlassCard>
-
-            {/* IoT Card */}
-            <GlassCard style={styles.smallSpecialtyCard} glowColor="blue">
-              <Ionicons name="hardware-chip" size={32} color="#3b82f6" style={styles.specialtyIcon} />
-              <Text style={styles.specialtyTitle}>IoT Dev</Text>
-              <Text style={styles.specialtyDesc}>
-                Building telemetry and micro-controller automation.
-              </Text>
+            <GlassCard style={styles.activityCard} glowColor="purple">
+              {activities.map((act, idx) => (
+                <View key={idx} style={[styles.activityRow, idx > 0 && styles.activityDivider]}>
+                  <View style={styles.activityDotCol}>
+                    <View style={styles.activityDot} />
+                    {idx < activities.length - 1 && <View style={styles.activityLine} />}
+                  </View>
+                  <View style={styles.activityTextCol}>
+                    <View style={styles.activityMetaRow}>
+                      <Text style={styles.activityRepo} numberOfLines={1}>{act.repo}</Text>
+                      <Text style={styles.activityDate}>{act.date}</Text>
+                    </View>
+                    <Text style={styles.activityMsg}>{act.message}</Text>
+                  </View>
+                </View>
+              ))}
             </GlassCard>
           </View>
+        )}
 
-          {/* AI Card */}
-          <GlassCard style={styles.wideSpecialtyCard} glowColor="cyan">
-            <View style={styles.aiBadgeHeader}>
-              <Ionicons name="bulb" size={36} color="#06b6d4" />
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={styles.specialtyTitle}>AI & Neural Systems</Text>
-                <Text style={styles.specialtyDesc}>
-                  Proficient in data processing, model accuracy assessments, and natural language interfaces.
-                </Text>
+        {/* SELECTED PROJECTS HEADER */}
+        <View style={styles.projectsHeader}>
+          <Text style={styles.projectsTitlePre}>All Creative Works,</Text>
+          <Text style={styles.projectsTitleMain}>Selected Projects</Text>
+          <Text style={styles.projectsSubtitle}>
+            {"It's time to see some work. Here are a few projects, codebases, and tool integrations I've built."}
+          </Text>
+        </View>
+
+        {/* FEATURED PROJECTS LIST */}
+        <View style={styles.projectsList}>
+          {projects.map((project) => (
+            <GlassCard
+              key={project._id}
+              style={styles.projectItemCard}
+              glowColor="none"
+            >
+              <View style={styles.projectCardContent}>
+                <View style={styles.projectTextCol}>
+                  <Text style={styles.projectCardTitle}>{project.title}</Text>
+                  <Text style={styles.projectCardDesc}>{project.description}</Text>
+                  <View style={styles.projectBadgesRow}>
+                    {project.technologies.map((t) => (
+                      <TechBadge key={t} name={t} theme="cyan" />
+                    ))}
+                  </View>
+                  <Pressable
+                    onPress={() => handleProjectPress(project.github)}
+                    style={styles.seeMoreLink}
+                  >
+                    <Text style={styles.seeMoreText}>See More</Text>
+                    <Ionicons name="arrow-forward" size={12} color="#06b6d4" />
+                  </Pressable>
+                </View>
+                <View style={styles.projectImageCol}>
+                  <View style={styles.projectImageFrame}>
+                    <Image
+                      source={getProjectThumbnail(project.title)}
+                      style={styles.projectThumbnail}
+                      contentFit="contain"
+                    />
+                  </View>
+                </View>
               </View>
-            </View>
-            <View style={styles.badgeRow}>
-              <TechBadge name="PyTorch" theme="cyan" />
-              <TechBadge name="Scikit-Learn" theme="cyan" />
-              <TechBadge name="Pandas" theme="cyan" />
-              <TechBadge name="NLP" theme="cyan" />
-            </View>
-          </GlassCard>
-        </View>
-
-        {/* METRICS DASHBOARD */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>
-            Dashboard <Text style={{ color: '#3b82f6' }}>Metrics</Text>
-          </Text>
-          <Text style={styles.sectionSubtitle}>
-            Quantifiable professional indicators
-          </Text>
-        </View>
-
-        <View style={styles.metricsContainer}>
-          <GlassCard style={styles.metricCard} glowColor="cyan">
-            <Text style={styles.metricNumber}>15+</Text>
-            <Text style={styles.metricLabel}>Python Projects</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.metricCard} glowColor="purple">
-            <Text style={[styles.metricNumber, { color: '#a855f7' }]}>92%</Text>
-            <Text style={styles.metricLabel}>Voice Accuracy</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.metricCard} glowColor="blue">
-            <Text style={[styles.metricNumber, { color: '#3b82f6' }]}>94%</Text>
-            <Text style={styles.metricLabel}>Model Accuracy</Text>
-          </GlassCard>
-
-          <GlassCard style={styles.metricCard} glowColor="none">
-            <Text style={[styles.metricNumber, { color: '#ECEDEE' }]}>8+</Text>
-            <Text style={styles.metricLabel}>Core Skills</Text>
-          </GlassCard>
+            </GlassCard>
+          ))}
         </View>
 
         <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
@@ -229,247 +315,334 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingTop: 10,
   },
-  heroContainer: {
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 32,
-    marginBottom: 16,
-  },
-  avatarContainer: {
-    width: 96,
-    height: 96,
-    borderRadius: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
     marginBottom: 20,
-    position: 'relative',
   },
-  avatarGlow: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 48,
-    backgroundColor: '#06b6d4',
-    opacity: 0.15,
-    transform: [{ scale: 1.15 }],
+  logoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
   },
-  avatarInner: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(21, 23, 24, 0.9)',
-    borderWidth: 2,
-    borderColor: '#06b6d4',
+  logoBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    backgroundColor: '#f97316',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  avatarText: {
-    color: '#fff',
-    fontSize: 28,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  welcomeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  welcomeText: {
-    color: '#06b6d4',
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.5,
-  },
-  nameText: {
-    color: '#ECEDEE',
-    fontSize: 36,
-    fontWeight: '800',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  titleText: {
-    color: '#9BA1A6',
-    fontSize: 15,
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: 16,
-    paddingHorizontal: 12,
-  },
-  taglineText: {
-    color: 'rgba(155, 161, 166, 0.75)',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 18,
-    paddingHorizontal: 28,
-    marginBottom: 24,
-  },
-  actionRow: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  hireButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#06b6d4',
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 24,
-    shadowColor: '#06b6d4',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 10,
-    elevation: 6,
-  },
-  hireButtonText: {
+  logoBadgeText: {
     color: '#fff',
     fontSize: 14,
-    fontWeight: '700',
-  },
-  sectionHeader: {
-    marginTop: 24,
-    marginBottom: 16,
-    paddingLeft: 4,
-  },
-  sectionTitle: {
-    fontSize: 24,
     fontWeight: '800',
-    color: '#ECEDEE',
-    marginBottom: 4,
   },
-  sectionSubtitle: {
-    fontSize: 13,
-    color: '#9BA1A6',
-  },
-  bentoGrid: {
-    gap: 16,
-    marginBottom: 16,
-  },
-  bioCard: {
-    padding: 24,
-  },
-  bioHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  bioAvatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#06b6d4',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 12,
-  },
-  bioAvatarText: {
+  logoText: {
     color: '#fff',
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  bioName: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#ECEDEE',
+    letterSpacing: 0.5,
   },
-  bioTitle: {
-    fontSize: 12,
-    color: '#06b6d4',
-    fontWeight: '500',
+  menuButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  bioDescription: {
-    fontSize: 14,
-    color: '#cbd5e1',
-    lineHeight: 20,
-    marginBottom: 20,
-  },
-  contactDetails: {
-    borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    paddingVertical: 14,
+  bannerCard: {
+    padding: 16,
     marginBottom: 16,
-    gap: 10,
+    backgroundColor: 'rgba(249, 115, 22, 0.12)',
+    borderColor: 'rgba(249, 115, 22, 0.25)',
   },
-  contactRow: {
+  bannerContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  bannerTextContainer: {
+    flex: 1,
+    paddingRight: 10,
+  },
+  bannerSignature: {
+    color: '#f97316',
+    fontSize: 22,
+    fontStyle: 'italic',
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  bannerSubtitle: {
+    color: '#9BA1A6',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  bannerAvatar: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    borderWidth: 2,
+    borderColor: '#f97316',
+  },
+  socialBar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 24,
+  },
+  socialItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 8,
+    backgroundColor: 'rgba(21, 23, 24, 0.5)',
+    borderWidth: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 8,
+    borderRadius: 14,
   },
-  contactRowText: {
-    fontSize: 13,
+  socialLabelCol: {
+    flex: 1,
+  },
+  socialNameText: {
+    fontSize: 11,
+    fontWeight: '700',
+  },
+  socialLinkLabel: {
     color: '#9BA1A6',
+    fontSize: 8,
     fontWeight: '500',
+    marginTop: 1,
   },
-  socialGlowRow: {
+  introSection: {
+    marginBottom: 28,
+  },
+  introPre: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  introMain: {
+    color: '#fff',
+    fontSize: 22,
+    fontWeight: '800',
+    marginBottom: 12,
+  },
+  introBody: {
+    color: '#9BA1A6',
+    fontSize: 13,
+    lineHeight: 18,
+    marginBottom: 16,
+  },
+  moreAboutButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#f97316',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  moreAboutButtonText: {
+    color: '#fff',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  projectsHeader: {
+    marginBottom: 16,
+  },
+  projectsTitlePre: {
+    color: '#f97316',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  projectsTitleMain: {
+    color: '#fff',
+    fontSize: 20,
+    fontWeight: '800',
+    marginBottom: 8,
+  },
+  projectsSubtitle: {
+    color: '#9BA1A6',
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  projectsList: {
+    gap: 16,
+  },
+  projectItemCard: {
+    padding: 16,
+    backgroundColor: 'rgba(21, 23, 24, 0.45)',
+  },
+  projectCardContent: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 12,
+  },
+  projectTextCol: {
+    flex: 1,
+  },
+  projectCardTitle: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '700',
+    marginBottom: 4,
+  },
+  projectCardDesc: {
+    color: '#9BA1A6',
+    fontSize: 12,
+    lineHeight: 16,
+    marginBottom: 10,
+  },
+  projectBadgesRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 10,
+  },
+  seeMoreLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  seeMoreText: {
+    color: '#06b6d4',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  projectImageCol: {
+    width: 80,
+    height: 80,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  projectImageFrame: {
+    width: 74,
+    height: 74,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 6,
+  },
+  projectThumbnail: {
+    width: '100%',
+    height: '100%',
+  },
+  sectionDivider: {
+    marginBottom: 28,
+  },
+  sectionHeader: {
+    marginBottom: 14,
+  },
+  sectionTitlePre: {
+    color: '#f97316',
+    fontSize: 14,
+    fontWeight: '700',
+    marginBottom: 2,
+  },
+  sectionTitleMain: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '800',
+    marginBottom: 6,
+  },
+  skillsGrid: {
+    gap: 12,
+  },
+  skillCard: {
+    padding: 14,
+    backgroundColor: 'rgba(21, 23, 24, 0.45)',
+  },
+  skillHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  skillName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    paddingRight: 10,
+  },
+  skillLevel: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#06b6d4',
+  },
+  progressBg: {
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#06b6d4',
+    borderRadius: 2,
+  },
+  activityCard: {
+    padding: 16,
+    backgroundColor: 'rgba(21, 23, 24, 0.45)',
+  },
+  activityRow: {
     flexDirection: 'row',
     gap: 12,
   },
-  socialBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(6, 182, 212, 0.1)',
+  activityDivider: {
+    marginTop: 12,
+    paddingTop: 12,
+  },
+  activityDotCol: {
     alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(6, 182, 212, 0.25)',
   },
-  specialtySplitRow: {
-    flexDirection: 'row',
-    gap: 16,
+  activityDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#a855f7',
+    marginTop: 4,
   },
-  smallSpecialtyCard: {
+  activityLine: {
+    width: 1,
     flex: 1,
-    padding: 16,
+    backgroundColor: 'rgba(168, 85, 247, 0.25)',
+    marginTop: 4,
+    marginBottom: -16,
   },
-  specialtyIcon: {
-    marginBottom: 12,
+  activityTextCol: {
+    flex: 1,
   },
-  specialtyTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#ECEDEE',
-    marginBottom: 6,
-  },
-  specialtyDesc: {
-    fontSize: 12,
-    color: '#9BA1A6',
-    lineHeight: 16,
-  },
-  wideSpecialtyCard: {
-    padding: 20,
-  },
-  aiBadgeHeader: {
+  activityMetaRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 14,
-  },
-  badgeRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginTop: 6,
-  },
-  metricsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-    marginBottom: 16,
-  },
-  metricCard: {
-    width: '47.5%',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 20,
+    marginBottom: 2,
   },
-  metricNumber: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#06b6d4',
-    marginBottom: 4,
-  },
-  metricLabel: {
+  activityRepo: {
     fontSize: 12,
-    color: '#9BA1A6',
+    fontWeight: '700',
+    color: '#fff',
+    flex: 1,
+    paddingRight: 8,
+  },
+  activityDate: {
+    fontSize: 9,
     fontWeight: '600',
-    textAlign: 'center',
+    color: '#9BA1A6',
+  },
+  activityMsg: {
+    fontSize: 11,
+    color: '#cbd5e1',
+    lineHeight: 15,
   },
 });

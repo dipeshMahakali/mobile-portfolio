@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, StyleProp, ViewStyle } from 'react-native';
 
 interface TechBadgeProps {
   name: string;
-  theme?: 'cyan' | 'purple' | 'blue' | 'green' | 'neutral';
+  theme?: 'cyan' | 'purple' | 'blue' | 'emerald' | 'rose' | 'slate' | 'green' | 'neutral';
   style?: StyleProp<ViewStyle>;
 }
 
@@ -27,6 +27,24 @@ export function TechBadge({ name, theme = 'neutral', style }: TechBadgeProps) {
           bg: 'rgba(59, 130, 246, 0.1)',
           border: 'rgba(59, 130, 246, 0.25)',
           text: '#60a5fa',
+        };
+      case 'emerald':
+        return {
+          bg: 'rgba(16, 185, 129, 0.1)',
+          border: 'rgba(16, 185, 129, 0.25)',
+          text: '#34d399',
+        };
+      case 'rose':
+        return {
+          bg: 'rgba(244, 63, 94, 0.1)',
+          border: 'rgba(244, 63, 94, 0.25)',
+          text: '#fb7185',
+        };
+      case 'slate':
+        return {
+          bg: 'rgba(100, 116, 139, 0.1)',
+          border: 'rgba(100, 116, 139, 0.25)',
+          text: '#94a3b8',
         };
       case 'green':
         return {
