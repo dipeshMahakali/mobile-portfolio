@@ -8,12 +8,14 @@ import {
   Platform,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
+import { Sparkles } from './sparkles';
 
 interface GlassCardProps {
   children: React.ReactNode;
   style?: StyleProp<ViewStyle>;
   glowColor?: 'cyan' | 'purple' | 'blue' | 'emerald' | 'rose' | 'slate' | 'none';
   onPress?: () => void;
+  showSparkles?: boolean;
 }
 
 export function GlassCard({
@@ -21,6 +23,7 @@ export function GlassCard({
   style,
   glowColor = 'none',
   onPress,
+  showSparkles = true,
 }: GlassCardProps) {
   const getBorderColor = () => {
     switch (glowColor) {
@@ -38,6 +41,25 @@ export function GlassCard({
         return 'rgba(100, 116, 139, 0.25)';
       default:
         return 'rgba(255, 255, 255, 0.08)';
+    }
+  };
+
+  const getSparkleColor = () => {
+    switch (glowColor) {
+      case 'cyan':
+        return '#22d3ee';
+      case 'purple':
+        return '#d8b4fe';
+      case 'blue':
+        return '#93c5fd';
+      case 'emerald':
+        return '#34d399';
+      case 'rose':
+        return '#fda4af';
+      case 'slate':
+        return '#cbd5e1';
+      default:
+        return '#f97316';
     }
   };
 
@@ -70,12 +92,18 @@ export function GlassCard({
           },
         ]}
       >
+        {showSparkles && <Sparkles color={getSparkleColor()} count={8} />}
         {children}
       </Pressable>
     );
   }
 
-  return <View style={cardStyle}>{children}</View>;
+  return (
+    <View style={cardStyle}>
+      {showSparkles && <Sparkles color={getSparkleColor()} count={8} />}
+      {children}
+    </View>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -84,6 +112,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 20,
     overflow: 'hidden',
+    position: 'relative',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -103,3 +132,4 @@ const styles = StyleSheet.create({
     }),
   },
 });
+

@@ -17,6 +17,7 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { GradientBackground } from '@/components/ui/gradient-background';
 import { SidebarMenu } from '@/components/ui/sidebar-menu';
 import { TechBadge } from '@/components/ui/tech-badge';
+import { SkeletonProjectCard, SkeletonSkillCard, SkeletonActivityCard } from '@/components/ui/wavy-skeleton';
 import { CONFIG } from '@/constants/config';
 import {
   fetchPersonalInfo,
@@ -35,10 +36,13 @@ export default function HomeScreen() {
   const [skills, setSkills] = React.useState<Skill[]>([]);
   const [activities, setActivities] = React.useState<GithubActivity[]>([]);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let active = true;
     async function loadData() {
+      setLoading(true);
+      const startTime = Date.now();
       try {
         const infoData = await fetchPersonalInfo();
         const username = infoData?.github ? infoData.github.split('/').pop() || 'starkdipesh' : 'starkdipesh';
@@ -47,6 +51,9 @@ export default function HomeScreen() {
           fetchSkills(),
           fetchGithubActivity(username),
         ]);
+        const elapsedTime = Date.now() - startTime;
+        const delay = Math.max(0, 1500 - elapsedTime);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         if (active) {
           if (infoData) setInfo(infoData);
           if (projectsData) {
@@ -58,6 +65,10 @@ export default function HomeScreen() {
         }
       } catch (err) {
         console.error('Failed loading home screen data:', err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     }
     loadData();
@@ -207,52 +218,62 @@ export default function HomeScreen() {
         </View>
 
         {/* CORE SKILLS MATRIX */}
-        {skills.length > 0 && (
+        {(loading || skills.length > 0) && (
           <View style={styles.sectionDivider}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitlePre}>Core Capabilities,</Text>
               <Text style={styles.sectionTitleMain}>Skills & Expertise</Text>
             </View>
             <View style={styles.skillsGrid}>
-              {skills.map((skill) => (
-                <GlassCard key={skill.name} style={styles.skillCard} glowColor="cyan">
-                  <View style={styles.skillHeader}>
-                    <Text style={styles.skillName} numberOfLines={1}>{skill.name}</Text>
-                    <Text style={styles.skillLevel}>{skill.level}%</Text>
-                  </View>
-                  <View style={styles.progressBg}>
-                    <View style={[styles.progressFill, { width: `${skill.level}%` }]} />
-                  </View>
-                </GlassCard>
-              ))}
+              {loading ? (
+                [0, 1, 2, 3].map((_, index) => (
+                  <SkeletonSkillCard key={index} style={styles.skillCard} />
+                ))
+              ) : (
+                skills.map((skill) => (
+                  <GlassCard key={skill.name} style={styles.skillCard} glowColor="cyan">
+                    <View style={styles.skillHeader}>
+                      <Text style={styles.skillName} numberOfLines={1}>{skill.name}</Text>
+                      <Text style={styles.skillLevel}>{skill.level}%</Text>
+                    </View>
+                    <View style={styles.progressBg}>
+                      <View style={[styles.progressFill, { width: `${skill.level}%` }]} />
+                    </View>
+                  </GlassCard>
+                ))
+              )}
             </View>
           </View>
         )}
 
         {/* GITHUB ACTIVITY FEED */}
-        {activities.length > 0 && (
+        {(loading || activities.length > 0) && (
           <View style={styles.sectionDivider}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitlePre}>Live Developer Log,</Text>
               <Text style={styles.sectionTitleMain}>GitHub Timeline</Text>
             </View>
-            <GlassCard style={styles.activityCard} glowColor="purple">
-              {activities.map((act, idx) => (
-                <View key={idx} style={[styles.activityRow, idx > 0 && styles.activityDivider]}>
-                  <View style={styles.activityDotCol}>
-                    <View style={styles.activityDot} />
-                    {idx < activities.length - 1 && <View style={styles.activityLine} />}
-                  </View>
-                  <View style={styles.activityTextCol}>
-                    <View style={styles.activityMetaRow}>
-                      <Text style={styles.activityRepo} numberOfLines={1}>{act.repo}</Text>
-                      <Text style={styles.activityDate}>{act.date}</Text>
+            {loading ? (
+              <SkeletonActivityCard style={styles.activityCard} />
+            ) : (
+              <GlassCard style={styles.activityCard} glowColor="purple">
+                {activities.map((act, idx) => (
+                  <View key={idx} style={[styles.activityRow, idx > 0 && styles.activityDivider]}>
+                    <View style={styles.activityDotCol}>
+                      <View style={styles.activityDot} />
+                      {idx < activities.length - 1 && <View style={styles.activityLine} />}
                     </View>
-                    <Text style={styles.activityMsg}>{act.message}</Text>
+                    <View style={styles.activityTextCol}>
+                      <View style={styles.activityMetaRow}>
+                        <Text style={styles.activityRepo} numberOfLines={1}>{act.repo}</Text>
+                        <Text style={styles.activityDate}>{act.date}</Text>
+                      </View>
+                      <Text style={styles.activityMsg}>{act.message}</Text>
+                    </View>
                   </View>
-                </View>
-              ))}
-            </GlassCard>
+                ))}
+              </GlassCard>
+            )}
           </View>
         )}
 
@@ -267,41 +288,47 @@ export default function HomeScreen() {
 
         {/* FEATURED PROJECTS LIST */}
         <View style={styles.projectsList}>
-          {projects.map((project) => (
-            <GlassCard
-              key={project._id}
-              style={styles.projectItemCard}
-              glowColor="none"
-            >
-              <View style={styles.projectCardContent}>
-                <View style={styles.projectTextCol}>
-                  <Text style={styles.projectCardTitle}>{project.title}</Text>
-                  <Text style={styles.projectCardDesc}>{project.description}</Text>
-                  <View style={styles.projectBadgesRow}>
-                    {project.technologies.map((t) => (
-                      <TechBadge key={t} name={t} theme="cyan" />
-                    ))}
+          {loading ? (
+            [0, 1].map((_, index) => (
+              <SkeletonProjectCard key={index} glowColor="none" style={styles.projectItemCard} />
+            ))
+          ) : (
+            projects.map((project) => (
+              <GlassCard
+                key={project._id}
+                style={styles.projectItemCard}
+                glowColor="none"
+              >
+                <View style={styles.projectCardContent}>
+                  <View style={styles.projectTextCol}>
+                    <Text style={styles.projectCardTitle}>{project.title}</Text>
+                    <Text style={styles.projectCardDesc}>{project.description}</Text>
+                    <View style={styles.projectBadgesRow}>
+                      {project.technologies.map((t) => (
+                        <TechBadge key={t} name={t} theme="cyan" />
+                      ))}
+                    </View>
+                    <Pressable
+                      onPress={() => handleProjectPress(project.github)}
+                      style={styles.seeMoreLink}
+                    >
+                      <Text style={styles.seeMoreText}>See More</Text>
+                      <Ionicons name="arrow-forward" size={12} color="#06b6d4" />
+                    </Pressable>
                   </View>
-                  <Pressable
-                    onPress={() => handleProjectPress(project.github)}
-                    style={styles.seeMoreLink}
-                  >
-                    <Text style={styles.seeMoreText}>See More</Text>
-                    <Ionicons name="arrow-forward" size={12} color="#06b6d4" />
-                  </Pressable>
-                </View>
-                <View style={styles.projectImageCol}>
-                  <View style={styles.projectImageFrame}>
-                    <Image
-                      source={getProjectThumbnail(project.title)}
-                      style={styles.projectThumbnail}
-                      contentFit="contain"
-                    />
+                  <View style={styles.projectImageCol}>
+                    <View style={styles.projectImageFrame}>
+                      <Image
+                        source={getProjectThumbnail(project.title)}
+                        style={styles.projectThumbnail}
+                        contentFit="contain"
+                      />
+                    </View>
                   </View>
                 </View>
-              </View>
-            </GlassCard>
-          ))}
+              </GlassCard>
+            ))
+          )}
         </View>
 
         <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />

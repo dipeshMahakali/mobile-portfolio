@@ -1,29 +1,34 @@
 {
   "expo": {
     "name": "dipesh-patel-portfolio",
-    "slug": "dipesh-patel-portfolio",
+    "slug": "personal-portfolio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/brain-chip-circuit.png",
+    "icon": "./assets/images/brain-chip-circuit-white-bg.jpg",
     "scheme": "myreactnativeapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dipeshpatelsteam.personalportfolio",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
+      }
     },
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "foregroundImage": "./assets/images/brain-chip-circuit.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.dipeshpatelsteam.personalportfolio"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/brain-chip-circuit.png"
     },
     "plugins": [
       "expo-router",
@@ -43,6 +48,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "2c527e6d-c761-4048-b9a5-13f52544930a"
+      }
+    },
+    "owner": "dipesh-patels-team"
   }
 }

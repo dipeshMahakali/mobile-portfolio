@@ -14,6 +14,7 @@ import * as Haptics from 'expo-haptics';
 import { GradientBackground } from '@/components/ui/gradient-background';
 import { GlassCard } from '@/components/ui/glass-card';
 import { TechBadge } from '@/components/ui/tech-badge';
+import { SkeletonProjectCard } from '@/components/ui/wavy-skeleton';
 
 import { fetchProjects, Project } from '@/services/api';
 import { SidebarMenu } from '@/components/ui/sidebar-menu';
@@ -21,17 +22,27 @@ import { SidebarMenu } from '@/components/ui/sidebar-menu';
 export default function ProjectsScreen() {
   const [projects, setProjects] = React.useState<Project[]>([]);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let active = true;
     async function loadData() {
+      setLoading(true);
+      const startTime = Date.now();
       try {
         const data = await fetchProjects();
+        const elapsedTime = Date.now() - startTime;
+        const delay = Math.max(0, 1500 - elapsedTime);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         if (active) {
           setProjects(data);
         }
       } catch (err) {
         console.error('Failed loading projects:', err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     }
     loadData();
@@ -90,84 +101,90 @@ export default function ProjectsScreen() {
         </View>
 
         <View style={styles.list}>
-          {projects.map((project, index) => {
-            const glowColor = getGlowColor(index);
-            const iconColor =
-              glowColor === 'cyan' ? '#06b6d4' :
-              glowColor === 'purple' ? '#a855f7' : '#3b82f6';
-            const buttonBg =
-              glowColor === 'cyan' ? 'rgba(6, 182, 212, 0.1)' :
-              glowColor === 'purple' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)';
-            const buttonBorder =
-              glowColor === 'cyan' ? 'rgba(6, 182, 212, 0.3)' :
-              glowColor === 'purple' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(59, 130, 246, 0.3)';
+          {loading ? (
+            [0, 1, 2].map((_, index) => (
+              <SkeletonProjectCard key={index} glowColor={getGlowColor(index)} />
+            ))
+          ) : (
+            projects.map((project, index) => {
+              const glowColor = getGlowColor(index);
+              const iconColor =
+                glowColor === 'cyan' ? '#06b6d4' :
+                glowColor === 'purple' ? '#a855f7' : '#3b82f6';
+              const buttonBg =
+                glowColor === 'cyan' ? 'rgba(6, 182, 212, 0.1)' :
+                glowColor === 'purple' ? 'rgba(168, 85, 247, 0.1)' : 'rgba(59, 130, 246, 0.1)';
+              const buttonBorder =
+                glowColor === 'cyan' ? 'rgba(6, 182, 212, 0.3)' :
+                glowColor === 'purple' ? 'rgba(168, 85, 247, 0.3)' : 'rgba(59, 130, 246, 0.3)';
 
-            return (
-              <GlassCard
-                key={project._id}
-                glowColor={glowColor}
-                style={styles.card}
-              >
-                <View style={styles.cardHeader}>
-                  <View style={styles.titleWrapper}>
-                    <Text style={styles.projectTitle}>{project.title}</Text>
-                    {project.featured && (
-                      <View style={styles.featuredBadge}>
-                        <Text style={styles.featuredBadgeText}>FEATURED</Text>
-                      </View>
-                    )}
-                  </View>
-                  <Ionicons
-                    name="folder-open-outline"
-                    size={20}
-                    color={iconColor}
-                  />
-                </View>
-
-                <Text style={styles.description}>{project.description}</Text>
-
-                {/* Technologies BADGES */}
-                <View style={styles.techContainer}>
-                  {project.technologies.map((tech) => (
-                    <TechBadge
-                      key={tech}
-                      name={tech}
-                      theme={glowColor}
+              return (
+                <GlassCard
+                  key={project._id}
+                  glowColor={glowColor}
+                  style={styles.card}
+                >
+                  <View style={styles.cardHeader}>
+                    <View style={styles.titleWrapper}>
+                      <Text style={styles.projectTitle}>{project.title}</Text>
+                      {project.featured && (
+                        <View style={styles.featuredBadge}>
+                          <Text style={styles.featuredBadgeText}>FEATURED</Text>
+                        </View>
+                      )}
+                    </View>
+                    <Ionicons
+                      name="folder-open-outline"
+                      size={20}
+                      color={iconColor}
                     />
-                  ))}
-                </View>
+                  </View>
 
-                {/* PROJECT METRICS */}
-                {project.metrics && project.metrics.length > 0 && (
-                  <View style={styles.metricsWrapper}>
-                    {project.metrics.map((metric) => (
-                      <View key={metric.label} style={styles.metricBlock}>
-                        <Text style={styles.metricLabel}>{metric.label}</Text>
-                        <Text style={styles.metricValue}>{metric.value}</Text>
-                      </View>
+                  <Text style={styles.description}>{project.description}</Text>
+
+                  {/* Technologies BADGES */}
+                  <View style={styles.techContainer}>
+                    {project.technologies.map((tech) => (
+                      <TechBadge
+                        key={tech}
+                        name={tech}
+                        theme={glowColor}
+                      />
                     ))}
                   </View>
-                )}
 
-                {/* REDIRECTION ACTION */}
-                <Pressable
-                  onPress={() => handleGithubPress(project.github)}
-                  style={({ pressed }) => [
-                    styles.githubButton,
-                    {
-                      backgroundColor: buttonBg,
-                      borderColor: buttonBorder,
-                    },
-                    pressed && { transform: [{ scale: 0.97 }], opacity: 0.8 }
-                  ]}
-                >
-                  <Ionicons name="logo-github" size={16} color="#fff" style={{ marginRight: 6 }} />
-                  <Text style={styles.githubButtonText}>View Source Code</Text>
-                  <Ionicons name="chevron-forward" size={14} color="#9BA1A6" style={{ marginLeft: 'auto' }} />
-                </Pressable>
-              </GlassCard>
-            );
-          })}
+                  {/* PROJECT METRICS */}
+                  {project.metrics && project.metrics.length > 0 && (
+                    <View style={styles.metricsWrapper}>
+                      {project.metrics.map((metric) => (
+                        <View key={metric.label} style={styles.metricBlock}>
+                          <Text style={styles.metricLabel}>{metric.label}</Text>
+                          <Text style={styles.metricValue}>{metric.value}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+
+                  {/* REDIRECTION ACTION */}
+                  <Pressable
+                    onPress={() => handleGithubPress(project.github)}
+                    style={({ pressed }) => [
+                      styles.githubButton,
+                      {
+                        backgroundColor: buttonBg,
+                        borderColor: buttonBorder,
+                      },
+                      pressed && { transform: [{ scale: 0.97 }], opacity: 0.8 }
+                    ]}
+                  >
+                    <Ionicons name="logo-github" size={16} color="#fff" style={{ marginRight: 6 }} />
+                    <Text style={styles.githubButtonText}>View Source Code</Text>
+                    <Ionicons name="chevron-forward" size={14} color="#9BA1A6" style={{ marginLeft: 'auto' }} />
+                  </Pressable>
+                </GlassCard>
+              );
+            })
+          )}
         </View>
 
         <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />

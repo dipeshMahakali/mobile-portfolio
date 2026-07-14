@@ -14,6 +14,11 @@ import { GlassCard } from '@/components/ui/glass-card';
 import { GradientBackground } from '@/components/ui/gradient-background';
 import { TechBadge } from '@/components/ui/tech-badge';
 import {
+  SkeletonExperienceCard,
+  SkeletonCertCard,
+  SkeletonApproachCard,
+} from '@/components/ui/wavy-skeleton';
+import {
   fetchExperiences,
   fetchApproach,
   fetchCertifications,
@@ -47,16 +52,22 @@ export default function ExperienceScreen() {
   const [approaches, setApproaches] = React.useState<Approach[]>([]);
   const [certifications, setCertifications] = React.useState<Certification[]>([]);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+  const [loading, setLoading] = React.useState(true);
 
   React.useEffect(() => {
     let active = true;
     async function loadData() {
+      setLoading(true);
+      const startTime = Date.now();
       try {
         const [expData, appData, certData] = await Promise.all([
           fetchExperiences(),
           fetchApproach(),
           fetchCertifications(),
         ]);
+        const elapsedTime = Date.now() - startTime;
+        const delay = Math.max(0, 1500 - elapsedTime);
+        await new Promise((resolve) => setTimeout(resolve, delay));
         if (active) {
           if (expData) {
             const getStartYear = (periodStr: string): number => {
@@ -75,6 +86,10 @@ export default function ExperienceScreen() {
         }
       } catch (err) {
         console.error('Failed loading experience screen data:', err);
+      } finally {
+        if (active) {
+          setLoading(false);
+        }
       }
     }
     loadData();
@@ -134,60 +149,90 @@ export default function ExperienceScreen() {
 
         {/* TIMELINE SECTION */}
         <View style={styles.timelineContainer}>
-          {experiences.map((exp, index) => {
-            const expTheme = exp.theme || 'purple';
-            return (
-              <View key={exp._id} style={styles.timelineRow}>
-                {/* Timeline Connector Graphic */}
-                <View style={styles.timelineLeftColumn}>
-                  <View
-                    style={[
-                      styles.timelineNode,
-                      { borderColor: getThemeColor(expTheme) }
-                    ]}
-                  >
+          {loading ? (
+            [0, 1, 2].map((_, index) => {
+              const themes: ('cyan' | 'purple' | 'blue' | 'emerald' | 'rose' | 'slate')[] = [
+                'blue', 'cyan', 'purple'
+              ];
+              const theme = themes[index % themes.length];
+              return (
+                <View key={index} style={styles.timelineRow}>
+                  <View style={styles.timelineLeftColumn}>
                     <View
                       style={[
-                        styles.nodeInner,
-                        { backgroundColor: getThemeColor(expTheme) }
+                        styles.timelineNode,
+                        { borderColor: getThemeColor(theme) }
                       ]}
-                    />
-                  </View>
-                  {index < experiences.length - 1 && (
-                    <View style={styles.timelineLine} />
-                  )}
-                </View>
-
-                {/* Timeline Card */}
-                <GlassCard
-                  glowColor={expTheme}
-                  style={styles.timelineCard}
-                >
-                  <Text style={styles.expPeriod}>{exp.period}</Text>
-                  <Text style={styles.expTitle}>{exp.title}</Text>
-                  <Text
-                    style={[
-                      styles.expCompany,
-                      { color: getThemeColor(expTheme) }
-                    ]}
-                  >
-                    {exp.company}
-                  </Text>
-                  <Text style={styles.expDesc}>{exp.description}</Text>
-
-                  <View style={styles.techList}>
-                    {exp.technologies.map((tech) => (
-                      <TechBadge
-                        key={tech}
-                        name={tech}
-                        theme={expTheme}
+                    >
+                      <View
+                        style={[
+                          styles.nodeInner,
+                          { backgroundColor: getThemeColor(theme) }
+                        ]}
                       />
-                    ))}
+                    </View>
+                    {index < 2 && <View style={styles.timelineLine} />}
                   </View>
-                </GlassCard>
-              </View>
-            );
-          })}
+                  <SkeletonExperienceCard theme={theme} style={styles.timelineCard} />
+                </View>
+              );
+            })
+          ) : (
+            experiences.map((exp, index) => {
+              const expTheme = exp.theme || 'purple';
+              return (
+                <View key={exp._id} style={styles.timelineRow}>
+                  {/* Timeline Connector Graphic */}
+                  <View style={styles.timelineLeftColumn}>
+                    <View
+                      style={[
+                        styles.timelineNode,
+                        { borderColor: getThemeColor(expTheme) }
+                      ]}
+                    >
+                      <View
+                        style={[
+                          styles.nodeInner,
+                          { backgroundColor: getThemeColor(expTheme) }
+                        ]}
+                      />
+                    </View>
+                    {index < experiences.length - 1 && (
+                      <View style={styles.timelineLine} />
+                    )}
+                  </View>
+
+                  {/* Timeline Card */}
+                  <GlassCard
+                    glowColor={expTheme}
+                    style={styles.timelineCard}
+                  >
+                    <Text style={styles.expPeriod}>{exp.period}</Text>
+                    <Text style={styles.expTitle}>{exp.title}</Text>
+                    <Text
+                      style={[
+                        styles.expCompany,
+                        { color: getThemeColor(expTheme) }
+                      ]}
+                    >
+                      {exp.company}
+                    </Text>
+                    <Text style={styles.expDesc}>{exp.description}</Text>
+
+                    <View style={styles.techList}>
+                      {exp.technologies.map((tech) => (
+                        <TechBadge
+                          key={tech}
+                          name={tech}
+                          theme={expTheme}
+                        />
+                      ))}
+                    </View>
+                  </GlassCard>
+                </View>
+              );
+            })
+          )}
         </View>
 
         {/* CERTIFICATIONS */}
@@ -196,20 +241,26 @@ export default function ExperienceScreen() {
         </View>
 
         <View style={styles.certList}>
-          {certifications.map((cert) => {
-            const certTitle = cert.title || (cert as any).name;
-            return (
-              <GlassCard key={certTitle} style={styles.certCard} glowColor="none">
-                <View style={styles.certIconBg}>
-                  <Ionicons name="ribbon" size={20} color="#a855f7" />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.certName}>{certTitle}</Text>
-                  <Text style={styles.certIssuer}>{cert.issuer}</Text>
-                </View>
-              </GlassCard>
-            );
-          })}
+          {loading ? (
+            [0, 1, 2].map((_, index) => (
+              <SkeletonCertCard key={index} style={styles.certCard} />
+            ))
+          ) : (
+            certifications.map((cert) => {
+              const certTitle = cert.title || (cert as any).name;
+              return (
+                <GlassCard key={certTitle} style={styles.certCard} glowColor="none">
+                  <View style={styles.certIconBg}>
+                    <Ionicons name="ribbon" size={20} color="#a855f7" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.certName}>{certTitle}</Text>
+                    <Text style={styles.certIssuer}>{cert.issuer}</Text>
+                  </View>
+                </GlassCard>
+              );
+            })
+          )}
         </View>
 
         {/* APPROACH */}
@@ -220,18 +271,24 @@ export default function ExperienceScreen() {
         </View>
 
         <View style={styles.approachGrid}>
-          {approaches.map((app) => (
-            <GlassCard key={app.id} style={styles.approachCard} glowColor="cyan">
-              <View style={styles.approachHeader}>
-                <View style={styles.approachIconWrapper}>
-                  <Ionicons name={getApproachIcon(app.id)} size={20} color="#06b6d4" />
+          {loading ? (
+            [0, 1, 2, 3].map((_, index) => (
+              <SkeletonApproachCard key={index} style={styles.approachCard} />
+            ))
+          ) : (
+            approaches.map((app) => (
+              <GlassCard key={app.id} style={styles.approachCard} glowColor="cyan">
+                <View style={styles.approachHeader}>
+                  <View style={styles.approachIconWrapper}>
+                    <Ionicons name={getApproachIcon(app.id)} size={20} color="#06b6d4" />
+                  </View>
+                  <Text style={styles.approachStep}>0{app.id}</Text>
                 </View>
-                <Text style={styles.approachStep}>0{app.id}</Text>
-              </View>
-              <Text style={styles.approachTitle}>{app.title}</Text>
-              <Text style={styles.approachDesc}>{app.description}</Text>
-            </GlassCard>
-          ))}
+                <Text style={styles.approachTitle}>{app.title}</Text>
+                <Text style={styles.approachDesc}>{app.description}</Text>
+              </GlassCard>
+            ))
+          )}
         </View>
 
         <View style={{ height: Platform.OS === 'ios' ? 100 : 80 }} />
