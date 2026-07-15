@@ -9,7 +9,7 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, usePathname } from 'expo-router';
+import { router, useSegments } from 'expo-router';
 import { GlassCard } from './glass-card';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -20,7 +20,7 @@ interface SidebarMenuProps {
 }
 
 export function SidebarMenu({ isOpen, onClose }: SidebarMenuProps) {
-  const currentPath = usePathname();
+  const segments = useSegments();
 
   const menuItems = [
     {
@@ -31,7 +31,7 @@ export function SidebarMenu({ isOpen, onClose }: SidebarMenuProps) {
     },
     {
       label: 'Home Dashboard',
-      route: '/(tabs)',
+      route: '/(tabs)/home',
       icon: 'grid-outline' as const,
       color: '#06b6d4',
     },
@@ -69,11 +69,16 @@ export function SidebarMenu({ isOpen, onClose }: SidebarMenuProps) {
 
   const isActive = (route: string) => {
     if (route === '/') {
-      return currentPath === '/' || currentPath === '/index';
+      // Welcome Gate is active only when not inside the tabs route group
+      return !segments.includes('(tabs)');
     }
-    // Check if the current route contains the tab route
+    if (route === '/(tabs)/home') {
+      // Home Dashboard is active when inside tabs and currently on the home screen
+      return segments.includes('(tabs)') && (segments.includes('home') || segments.length === 1);
+    }
+    // For other tabs:
     const baseTab = route.split('/').pop() || '';
-    return currentPath.includes(baseTab);
+    return segments.includes('(tabs)') && segments.includes(baseTab);
   };
 
   return (

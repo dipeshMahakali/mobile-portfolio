@@ -1,9 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { Image } from 'expo-image';
 import * as Haptics from 'expo-haptics';
+import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import React from 'react';
 import {
+  Animated,
   Linking,
   Pressable,
   StyleSheet,
@@ -15,14 +16,57 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GlassCard } from '@/components/ui/glass-card';
 import { GradientBackground } from '@/components/ui/gradient-background';
 import { SidebarMenu } from '@/components/ui/sidebar-menu';
+import { SwipeButton } from '@/components/ui/swipe-button';
 import { CONFIG } from '@/constants/config';
-import { fetchPersonalInfo, fetchMetrics, PersonalInfo, MetricItem } from '@/services/api';
+import { fetchMetrics, fetchPersonalInfo, MetricItem, PersonalInfo } from '@/services/api';
 
 export default function LandingScreen() {
   const insets = useSafeAreaInsets();
   const [info, setInfo] = React.useState<PersonalInfo>(CONFIG.personalInfo);
   const [metrics, setMetrics] = React.useState<MetricItem[]>(CONFIG.metrics);
   const [isMenuOpen, setIsMenuOpen] = React.useState(false);
+
+  const spinValue = React.useRef(new Animated.Value(0)).current;
+  const pulseValue = React.useRef(new Animated.Value(1)).current;
+
+  React.useEffect(() => {
+    // Spin animation for royal orbit
+    const spinAnim = Animated.loop(
+      Animated.timing(spinValue, {
+        toValue: 1,
+        duration: 10000,
+        useNativeDriver: true,
+      })
+    );
+    spinAnim.start();
+
+    // Breathing pulse animation for royal glow
+    const pulseAnim = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseValue, {
+          toValue: 1.06,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseValue, {
+          toValue: 1.0,
+          duration: 2500,
+          useNativeDriver: true,
+        }),
+      ])
+    );
+    pulseAnim.start();
+
+    return () => {
+      spinAnim.stop();
+      pulseAnim.stop();
+    };
+  }, [spinValue, pulseValue]);
+
+  const spin = spinValue.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
 
   React.useEffect(() => {
     let active = true;
@@ -58,7 +102,7 @@ export default function LandingScreen() {
 
   const handleExplorePress = () => {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    router.replace('/(tabs)');
+    router.replace('/(tabs)/home');
   };
 
   const handlePhonePress = () => {
@@ -102,40 +146,41 @@ export default function LandingScreen() {
           </Pressable>
         </View>
 
-        {/* HERO IMAGE SECTION (Orange background shape & Avatar) */}
+        {/* HERO IMAGE SECTION (Royal crest & Avatar) */}
         <View style={styles.heroSection}>
           <View style={styles.avatarWrapper}>
-            {/* Curved Orange Backdrop Circle */}
-            <View style={styles.backdropCircle}>
-              {/* Grid Lines to simulate basketball / technical sphere */}
-              <View style={[styles.gridLine, styles.gridLineHorizontal1]} />
-              <View style={[styles.gridLine, styles.gridLineHorizontal2]} />
-              <View style={[styles.gridLine, styles.gridLineVertical1]} />
-              <View style={[styles.gridLine, styles.gridLineVertical2]} />
-            </View>
+            {/* Royal Glow Ring (Pulsing) */}
+            <Animated.View style={[styles.royalGlowRing, { transform: [{ scale: pulseValue }] }]} />
+
+            {/* Royal Metallic Inner Ring */}
+            <View style={styles.royalInnerRing} />
+
+            {/* Royal Spinning Dashed Orbit */}
+            <Animated.View style={[styles.royalOuterDashedRing, { transform: [{ rotate: spin }] }]} />
 
             {/* Centralized Avatar Image */}
             <Image
-              source={{ uri: info.avatarUrl || CONFIG.avatarUrl }}
+              source={require('@/assets/images/royal-avatar.png')}
               style={styles.avatarImage}
               contentFit="cover"
               transition={300}
             />
 
-            {/* Email Pill Overlay (Bottom-Left) */}
-            <Pressable
-              onPress={handleEmailPress}
-              style={({ pressed }) => [
-                styles.emailOverlay,
-                pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }
-              ]}
-            >
-              <Ionicons name="mail" size={14} color="#f97316" />
-              <Text style={styles.emailOverlayText} numberOfLines={1} ellipsizeMode="tail">
-                {email}
-              </Text>
-            </Pressable>
           </View>
+
+          {/* Email Pill (Centered below the avatar, guaranteed no overlap!) */}
+          <Pressable
+            onPress={handleEmailPress}
+            style={({ pressed }) => [
+              styles.emailPill,
+              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 }
+            ]}
+          >
+            <Ionicons name="mail-outline" size={14} color="#fbbf24" />
+            <Text style={styles.emailPillText} numberOfLines={1} ellipsizeMode="tail">
+              {email}
+            </Text>
+          </Pressable>
         </View>
 
         {/* METRICS ROW (Perfectly adjusted below the avatar, no overlap!) */}
@@ -156,34 +201,22 @@ export default function LandingScreen() {
         </View>
 
         {/* ACTIONS */}
-        <View style={styles.actionsRow}>
-          <Pressable
-            onPress={handleExplorePress}
-            style={({ pressed }) => [
-              styles.primaryButton,
-              pressed && { transform: [{ scale: 0.96 }] }
-            ]}
-          >
-            <Text style={styles.primaryButtonText}>Explore Profile</Text>
-            <View style={styles.arrowIconBg}>
-              <Ionicons name="arrow-forward" size={16} color="#fff" />
-            </View>
-          </Pressable>
+        <View style={styles.actionsColumn}>
+          <SwipeButton
+            onSwipeSuccess={handleExplorePress}
+            title="Swipe to Explore Profile"
+            icon="arrow-forward"
+            color="#06b6d4"
+            activeColor="#3b82f6"
+          />
 
-          <View style={styles.phoneActionWrapper}>
-            <Pressable
-              onPress={handlePhonePress}
-              style={({ pressed }) => [
-                styles.phoneButton,
-                pressed && { transform: [{ scale: 0.92 }] }
-              ]}
-            >
-              <Ionicons name="call" size={18} color="#fff" />
-            </Pressable>
-            <Pressable onPress={handlePhonePress}>
-              <Text style={styles.phoneLabel}>Call Me Now</Text>
-            </Pressable>
-          </View>
+          <SwipeButton
+            onSwipeSuccess={handlePhonePress}
+            title="Swipe to Call Now"
+            icon="call"
+            color="#ea580c"
+            activeColor="#22c55e"
+          />
         </View>
       </View>
     </GradientBackground>
@@ -244,7 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginVertical: 5,
     flex: 1,
-    maxHeight: 280,
+    maxHeight: 300,
   },
   avatarWrapper: {
     width: '100%',
@@ -253,71 +286,46 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
-  backdropCircle: {
-    width: 210,
-    height: 210,
-    borderRadius: 105,
-    backgroundColor: '#ea580c',
-    position: 'absolute',
-    overflow: 'hidden',
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.4,
-    shadowRadius: 20,
-    elevation: 10,
-  },
-  gridLine: {
-    position: 'absolute',
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-    borderWidth: 1.5,
-  },
-  gridLineHorizontal1: {
-    top: '30%',
-    left: -20,
-    right: -20,
-    height: 100,
-    borderRadius: 100,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
-  },
-  gridLineHorizontal2: {
-    bottom: '30%',
-    left: -20,
-    right: -20,
-    height: 100,
-    borderRadius: 100,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-    borderRightWidth: 0,
-  },
-  gridLineVertical1: {
-    left: '30%',
-    top: -20,
-    bottom: -20,
-    width: 100,
-    borderRadius: 100,
-    borderRightWidth: 0,
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-  },
-  gridLineVertical2: {
-    right: '30%',
-    top: -20,
-    bottom: -20,
-    width: 100,
-    borderRadius: 100,
-    borderLeftWidth: 0,
-    borderTopWidth: 0,
-    borderBottomWidth: 0,
-  },
   avatarImage: {
-    width: 175,
-    height: 175,
-    borderRadius: 87.5,
+    width: 170,
+    height: 170,
+    borderRadius: 85,
     borderWidth: 4,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderColor: '#fbbf24', // Royal Gold
     position: 'absolute',
+    zIndex: 5,
+  },
+  royalGlowRing: {
+    width: 176,
+    height: 176,
+    borderRadius: 88,
+    backgroundColor: 'rgba(251, 191, 36, 0.12)',
+    position: 'absolute',
+    zIndex: 1,
+    shadowColor: '#fbbf24',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  royalInnerRing: {
+    width: 194,
+    height: 194,
+    borderRadius: 97,
+    borderWidth: 1.5,
+    borderColor: '#d97706', // Amber gold border
+    position: 'absolute',
+    zIndex: 2,
+  },
+  royalOuterDashedRing: {
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    borderWidth: 1.5,
+    borderColor: 'rgba(251, 191, 36, 0.45)', // Semitransparent gold dashed ring
+    borderStyle: 'dashed',
+    position: 'absolute',
+    zIndex: 3,
   },
   metricsRow: {
     flexDirection: 'row',
@@ -346,24 +354,23 @@ const styles = StyleSheet.create({
     marginTop: 2,
     textAlign: 'center',
   },
-  emailOverlay: {
-    position: 'absolute',
-    left: 20,
-    bottom: 10,
+  emailPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(21, 23, 24, 0.8)',
-    borderColor: 'rgba(249, 115, 22, 0.3)',
+    backgroundColor: 'rgba(21, 23, 24, 0.85)',
+    borderColor: 'rgba(251, 191, 36, 0.35)', // Gold theme border
     borderWidth: 1,
     paddingVertical: 6,
     paddingHorizontal: 12,
     borderRadius: 14,
-    maxWidth: 160,
+    marginTop: -4,
+    zIndex: 10,
+    maxWidth: '85%',
   },
-  emailOverlayText: {
+  emailPillText: {
     color: '#9BA1A6',
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
   },
   introSection: {
@@ -388,60 +395,10 @@ const styles = StyleSheet.create({
     color: '#9BA1A6',
     lineHeight: 18,
   },
-  actionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  actionsColumn: {
+    flexDirection: 'column',
     width: '100%',
-    gap: 16,
+    gap: 12,
     marginBottom: 5,
-  },
-  primaryButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#f97316',
-    paddingLeft: 20,
-    paddingRight: 6,
-    paddingVertical: 6,
-    borderRadius: 30,
-    height: 52,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  arrowIconBg: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  phoneActionWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  phoneButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#ea580c',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#ea580c',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
-  },
-  phoneLabel: {
-    color: '#9BA1A6',
-    fontSize: 12,
-    fontWeight: '700',
   },
 });

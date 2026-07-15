@@ -52,7 +52,7 @@ export default function HomeScreen() {
           fetchGithubActivity(username),
         ]);
         const elapsedTime = Date.now() - startTime;
-        const delay = Math.max(0, 1500 - elapsedTime);
+        const delay = Math.max(0, 300 - elapsedTime);
         await new Promise((resolve) => setTimeout(resolve, delay));
         if (active) {
           if (infoData) setInfo(infoData);
@@ -171,7 +171,7 @@ export default function HomeScreen() {
               <Text style={styles.bannerSubtitle}>{title}</Text>
             </View>
             <Image
-              source={{ uri: info.avatarUrl || CONFIG.avatarUrl }}
+              source={require('@/assets/images/royal-avatar.png')}
               style={styles.bannerAvatar}
               contentFit="cover"
               transition={300}

@@ -32,7 +32,7 @@ export default function ProjectsScreen() {
       try {
         const data = await fetchProjects();
         const elapsedTime = Date.now() - startTime;
-        const delay = Math.max(0, 1500 - elapsedTime);
+        const delay = Math.max(0, 300 - elapsedTime);
         await new Promise((resolve) => setTimeout(resolve, delay));
         if (active) {
           setProjects(data);

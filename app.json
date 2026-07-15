@@ -4,7 +4,7 @@
     "slug": "personal-portfolio",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/brain-chip-circuit-white-bg.jpg",
+    "icon": "./assets/images/brain-chip-circuit-white-bg-padded.jpg",
     "scheme": "myreactnativeapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -18,7 +18,7 @@
     "android": {
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/brain-chip-circuit.png",
+        "foregroundImage": "./assets/images/brain-chip-circuit-padded.png",
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -35,11 +35,12 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/brain-chip-circuit.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
           "dark": {
+            "image": "./assets/images/brain-chip-circuit-white.png",
             "backgroundColor": "#000000"
           }
         }
